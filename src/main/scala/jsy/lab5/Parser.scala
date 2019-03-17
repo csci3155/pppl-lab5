@@ -5,7 +5,8 @@ package jsy.lab5
 
 import jsy.lab5.ast._
 import scala.util.parsing.combinator._
-import scala.util.parsing.input.{StreamReader,Reader}
+import scala.util.parsing.combinator.lexical.StdLexical
+import scala.util.parsing.input.{StreamReader}
 import java.io.{InputStreamReader,FileInputStream}
 import java.io.InputStream
 import java.io.File
@@ -19,7 +20,7 @@ trait JSTokens extends token.StdTokens {
   }
 }
 
-class Lexer extends lexical.StdLexical with JSTokens {
+class Lexer extends StdLexical with JSTokens {
   override def token: Parser[Token] =
     decimal ~ opt(exponent) ^^ {
       case dec ~ exp => FloatLiteral(List(Some(dec), exp).flatten.mkString)
@@ -40,20 +41,12 @@ class Lexer extends lexical.StdLexical with JSTokens {
 }
 
 trait TokenParser extends syntactical.StdTokenParsers {
-  type Tokens = JSTokens
-  val lexical = new Lexer
-  
-  import lexical.FloatLiteral
-  
+  type Tokens <: JSTokens
   def floatLit: Parser[String] =
-    elem("float", _.isInstanceOf[FloatLiteral]) ^^ (_.chars)
+    elem("float", _.isInstanceOf[lexical.FloatLiteral]) ^^ (_.chars)
 }
 
-object Parser extends TokenParser {
-  /* Lexer Set Up */
-  lexical.reserved ++= List("jsy", "undefined", "true", "false", "print", "console", "log", "const", "function", "return", "number", "bool", "string", "Undefined", "null", "Null", "interface", "var", "name", "ref", "RegExp")
-  lexical.delimiters ++= List("-", "!", ";", ",", "+", "*", "/", "=", "===", "!==", "<", "<=", ">", ">=", "&&", "||", "(", ")", ".", "{", "}", "?", ":", "=>")
-  
+trait Parser { self: TokenParser =>
   /* Helpers */
   def seqExpr(e1: Expr, e2: Expr): Expr = Binary(Seq, e1, e2)
   
@@ -63,7 +56,7 @@ object Parser extends TokenParser {
    * stmt ::= block | decl | ; | expr
    * block ::= '{' prog '}'
    * decl ::= const x = expr
-   * expr ::= seq
+   * expr ::= seoeq
    * seq ::= cond{,cond}
    * cond ::= binary [? cond : cond]
    * binary ::= unary{bop(_)unary}
@@ -210,7 +203,6 @@ object Parser extends TokenParser {
       "false" ^^ (_ => B(false)) |
       "undefined" ^^ (_ => Undefined) |
       "null" ^^ (_ => Null) |
-      ("jsy" ~ "." ~ "print") ~> "(" ~> expr <~ ")" ^^ (e => Print(e)) |
       ("console" ~ "." ~ "log") ~> "(" ~> expr <~ ")" ^^ (e => Print(e)) |
       function |
       record(",", Obj, noseq)
@@ -218,7 +210,12 @@ object Parser extends TokenParser {
     "(" ~> expr <~ ")" |
     "{" ~> "{" ~> prog <~ "}" <~ "}" |
     failure("atomic expression expected")
-    
+
+  def jsy: Parser[Expr] =
+    "jsy" ~> "." ~> withpos("print") ~ ("(" ~> expr <~ ")") ^^ {
+      case ((pos, _)) ~ e => Print(e) setPos pos
+    }
+
   def function: Parser[Expr] =
     ("function" ~> opt(ident)) ~ ("(" ~> repsep(colonpair(modety), ",") <~ ")") ~ opt(":" ~> ty) ~ ("{" ~> stmts ~ ret <~ rep(empty_stmt) <~ "}") ^^ {
       case f ~ params ~ retty ~ (stmts ~ ret) =>
@@ -279,8 +276,8 @@ object Parser extends TokenParser {
     
   def withposrep1[T](q: => Parser[T]): Parser[List[(Position,T)]] =
     rep1(withpos(q))
-    
-  private var parseSource: String = "<source>"
+
+  protected var parseSource: String = "<source>"
 
   def formatErrorMessage(pos: Position, kind: String, msg: String, longString: Boolean = false): String =
     if (pos != NoPosition)
@@ -290,58 +287,67 @@ object Parser extends TokenParser {
         "%s\n%s:%s:%s: %s".format(kind, parseSource, pos.line, pos.column, msg)
     else
       "%s\n%s: %s".format(kind, parseSource, msg)
-    
-  class SyntaxError(msg: String, next: Input) extends Exception {
-    override def toString = formatErrorMessage(next.pos, "SyntaxError", msg, true)
+
+  case class SyntaxError(msg: String, pos: Position) extends Exception {
+    override def toString = formatErrorMessage(pos, "SyntaxError", msg, true)
   }
-    
+}
+
+object Parser extends Parser with TokenParser {
+  type Tokens = JSTokens
+  val lexical = new Lexer
+
+  /* Lexer Set Up */
+  lexical.reserved ++= List("jsy", "undefined", "true", "false", "print", "console", "log", "const", "function", "return", "number", "bool", "string", "Undefined", "null", "Null", "interface", "var", "name", "ref", "RegExp")
+  lexical.delimiters ++= List("-", "!", ";", ",", "+", "*", "/", "=", "===", "!==", "<", "<=", ">", ">=", "&&", "||", "(", ")", ".", "{", "}", "?", ":", "=>")
+
   def parseTokens(tokens: lexical.Scanner): Expr = {
     phrase(prog)(tokens) match {
       case Success(e, _) => e
-      case NoSuccess(msg, next) => throw new SyntaxError(msg, next)
+      case NoSuccess(msg, next) => throw SyntaxError(msg, next.pos)
     }
   }
-  
+
   def parseTypTokens(tokens: lexical.Scanner): Typ = {
     phrase(ty)(tokens) match {
       case Success(t, _) => t
-      case NoSuccess(msg, next) => throw new SyntaxError(msg, next)
+      case NoSuccess(msg, next) => throw SyntaxError(msg, next.pos)
     }
   }
-  
+
   /*** External Interface ***/
-  
+
   def formatErrorMessage(e: Expr, kind: String, msg: String): String =
     formatErrorMessage(e.pos, kind, msg)
-  
+
   def parse(s: String): Expr = {
     parseTokens(new lexical.Scanner(s))
   }
-  
+
   def parseTyp(s: String): Typ = {
     parseTypTokens(new lexical.Scanner(s))
   }
-  
+
   def parse(in: InputStream): Expr = {
     val reader = StreamReader(new InputStreamReader(in))
     parseTokens(new lexical.Scanner(reader))
   }
-  
+
   def parseFile(filename: String): Expr = {
     parseSource = filename
     parse(new FileInputStream(filename))
   }
-  
+
   def parseFile(file: File): Expr = {
     parseSource = file.getName
     parse(new FileInputStream(file))
   }
-  
+
   implicit class StringExpr(s: String) {
     val e = parse(s)
     def a: Expr = e
   }
-  
+
   implicit class StringTyp(s: String) {
     val typ = parseTyp(s)
     def t: Typ = typ

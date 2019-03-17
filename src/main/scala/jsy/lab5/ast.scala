@@ -2,13 +2,14 @@ package jsy.lab5
 
 import scala.util.parsing.input.Positional
 import jsy.util.DoWith
+import jsy.util.Visitor
 
 /**
  * @author Bor-Yuh Evan Chang
  */
-object ast {
-  sealed abstract class Expr extends Positional
-  
+class ast {
+  abstract class Expr extends Positional
+
   /* Variables */
   case class Var(x: String) extends Expr
   
@@ -72,7 +73,7 @@ object ast {
   case class Cast(t: Typ) extends Uop
   
   /* Types */
-  sealed abstract class Typ
+  abstract class Typ
   case object TNumber extends Typ
   case object TBool extends Typ
   case object TString extends Typ
@@ -151,59 +152,62 @@ object ast {
     case TNumber | TBool | TString | TUndefined | TNull => true
     case _ => false
   }
-  
+
   /*
    * Pretty-print values.
    * 
    * We do not override the toString method so that the abstract syntax can be printed
    * as is.
    */
-  def pretty(v: Expr): String = {
-    require(isValue(v))
-    (v: @unchecked) match {
-      case N(n) => n.toString
-      case B(b) => b.toString
-      case Undefined => "undefined"
-      case S(s) => s
-      case Function(p, _, _, _) =>
-        "[Function%s]".format(p match { case None => "" case Some(s) => ": " + s })
-      case Obj(fields) =>
-        val pretty_fields =
-          fields map {
-            case (f, S(s)) => f + ": '" + s + "'"
-            case (f, v) => f + ": " + pretty(v)
-          } reduceRightOption {
-            (s, acc) => s + ",\n  " + acc
-          }
-        "{ %s }".format(pretty_fields.getOrElse(""))
-      case Null => "null"
-      case A(i) => "0x%x".format(i)
+  protected def prettyVal: Visitor[Expr,String] = Visitor(rec => {
+    case N(n) => n.toString
+    case B(b) => b.toString
+    case Undefined => "undefined"
+    case S(s) => s
+    case Function(p, _, _, _) =>
+      "[Function%s]".format(p match { case None => "" case Some(s) => ": " + s })
+    case Obj(fields) =>
+      val pretty_fields =
+        fields map {
+          case (f, S(s)) => f + ": '" + s + "'"
+          case (f, v) => f + ": " + rec(v)
+        } reduceRightOption {
+          (s, acc) => s + ",\n  " + acc
+        }
+      "{ %s }".format(pretty_fields.getOrElse(""))
+    case Null => "null"
+    case A(i) => "0x%x".format(i)
+  })
+
+  def pretty(v: Expr): String = prettyVal(v)
+
+  protected def prettyValMem: Visitor[Expr, Mem => String] = prettyVal flatMap { pv => Visitor(rec => {
+    case a @ A(_) => { m => if (m contains a) rec(m(a))(m) else pv(a) }
+    case Obj(fields) => { m =>
+      val pretty_fields =
+        fields map {
+          case (f, S(s)) => f + ": '" + s + "'"
+          case (f, v) => f + ": " + rec(v)(m)
+        } reduceRightOption {
+          (s, acc) => s + ",\n  " + acc
+        }
+      "{ %s }".format(pretty_fields.getOrElse(""))
     }
-  }
+    case v => { _ => pv(v) }
+  })}
 
   def pretty(m: Mem, v: Expr): String = {
-    (v: @unchecked) match {
-      case a @ A(_) if m contains a => pretty(m, m(a))
-      case Obj(fields) =>
-        val pretty_fields =
-          fields map {
-            case (f, S(s)) => f + ": '" + s + "'"
-            case (f, v) => f + ": " + pretty(m, v)
-          } reduceRightOption {
-            (s, acc) => s + ",\n  " + acc
-          }
-        "{ %s }".format(pretty_fields.getOrElse(""))
-      case _ => pretty(v)
-    }
+    require(isValue(v))
+    prettyValMem(v)(m)
   }
-  
+
   /*
    * Pretty-print types.
    * 
    * We do not override the toString method so that the abstract syntax can be printed
    * as is.
    */
-  def pretty(t: Typ): String = t match {
+  protected def prettyTyp: Visitor[Typ,String] = Visitor(rec => {
     case TNumber => "number"
     case TBool => "bool"
     case TString => "string"
@@ -213,19 +217,21 @@ object ast {
         params map { case (x,mt) => "%s: %s".format(x, pretty(mt)) } reduceRightOption {
           (s, acc) => s + ", " + acc
         }
-      "(%s) => %s".format(pretty_params.getOrElse(""), pretty(tret))
+      "(%s) => %s".format(pretty_params.getOrElse(""), rec(tret))
     }
     case TObj(tfields) =>
       val pretty_fields: Option[String] =
-        tfields map { case (f,t) => "%s: %s".format(f, pretty(t)) } reduceRightOption {
+        tfields map { case (f,t) => "%s: %s".format(f, rec(t)) } reduceRightOption {
           (s, acc) => s + "; " + acc
         }
       "{ %s }".format(pretty_fields.getOrElse(""))
     case TNull => "Null"
     case TVar(tvar) => tvar
-    case TInterface(tvar, t1) => "Interface %s %s".format(tvar, pretty(t1))
-  }
-  
+    case TInterface(tvar, t1) => "Interface %s %s".format(tvar, rec(t1))
+  })
+
+  def pretty(t: Typ): String = prettyTyp(t)
+
   def pretty(mty: MTyp): String = mty match {
     case MTyp(MConst, ty) => s"${pretty(ty)}"
     case MTyp(mode, ty) => s"${pretty(mode)} ${pretty(ty)}"
@@ -239,87 +245,35 @@ object ast {
   }
   
   /* Get the free variables of e. */
-  def freeVarsVar(e: Expr): Set[Var] = {
-    def fv(e: Expr): Set[Var] = e match {
-      case vr @ Var(x) => Set(vr)
-      case Decl(_, x, e1, e2) => fv(e1) | (fv(e2) - Var(x))
-      case Function(p, params, _, e1) => {
-        val boundvars = (params map { case (x, _) => Var(x) }) ++ (p map Var)
-        fv(e1) -- boundvars
-      }
-      case N(_) | B(_) | Undefined | S(_) | Null | A(_) => Set.empty
-      case Unary(_, e1) => fv(e1)
-      case Binary(_, e1, e2) => fv(e1) | fv(e2)
-      case If(e1, e2, e3) => fv(e1) | fv(e2) | fv(e3)
-      case Call(e1, args) => fv(e1) | args.foldLeft(Set.empty: Set[Var]) {
-        ((acc: Set[Var], ei) => acc | fv(ei))
-      }
-      case Print(e1) => fv(e1)
-      case Obj(fields) => fields.foldLeft(Set.empty: Set[Var])({ case (acc, (_, ei)) => acc | fv(ei) })
-      case GetField(e1, _) => fv(e1)
-      case Assign(e1, e2) => fv(e1) | fv(e2)
-      case InterfaceDecl(_, _, e1) => fv(e1)
+  protected def freeVarsVar: Visitor[Expr,Set[Var]] = Visitor(fv => {
+    case vr@Var(x) => Set(vr)
+    case Decl(_, x, e1, e2) => fv(e1) | (fv(e2) - Var(x))
+    case Function(p, params, _, e1) => {
+      val boundvars = (params map { case (x, _) => Var(x) }) ++ (p map Var)
+      fv(e1) -- boundvars
     }
-    fv(e)
-  }
+    case N(_) | B(_) | Undefined | S(_) | Null | A(_) => Set.empty
+    case Unary(_, e1) => fv(e1)
+    case Binary(_, e1, e2) => fv(e1) | fv(e2)
+    case If(e1, e2, e3) => fv(e1) | fv(e2) | fv(e3)
+    case Call(e1, args) => fv(e1) | args.foldLeft(Set.empty: Set[Var]) {
+      ((acc: Set[Var], ei) => acc | fv(ei))
+    }
+    case Print(e1) => fv(e1)
+    case Obj(fields) => fields.foldLeft(Set.empty: Set[Var])({ case (acc, (_, ei)) => acc | fv(ei) })
+    case GetField(e1, _) => fv(e1)
+    case Assign(e1, e2) => fv(e1) | fv(e2)
+    case InterfaceDecl(_, _, e1) => fv(e1)
+  })
+
   def freeVars(e: Expr): Set[String] = freeVarsVar(e) map { case Var(x) => x }
   
   /* Check closed expressions. */
   def closed(e: Expr): Boolean = freeVarsVar(e).isEmpty
+
   def checkClosed(e: Expr): Unit = {
     freeVarsVar(e).headOption.foreach { x => throw new UnboundVariableError(x) }
   }
-
-  /* Rename bound variables in e to avoid capturing free variables in esub. */
-  /*
-  def avoidCapture(avoidVars: Set[String], e: Expr): Expr = {
-    def renameVar(x: String): String = if (avoidVars contains x) renameVar(x + "$") else x
-
-    def rename(env: Map[String,String], e: Expr): Expr = {
-      def ren(e: Expr): Expr = rename(env, e)
-      e match {
-        case N(_) | B(_) | Undefined | S(_) | Null | A(_) => e
-        case Print(e1) => Print(ren(e1))
-        case Unary(uop, e1) => Unary(uop, ren(e1))
-        case Binary(bop, e1, e2) => Binary(bop, ren(e1), ren(e2))
-        case If(e1, e2, e3) => If(ren(e1), ren(e2), ren(e3))
-        case Var(y) => Var(env.getOrElse(y, y))
-        case Decl(mut, y, e1, e2) =>
-          val yrenamed = renameVar(y)
-          Decl(mut, yrenamed, ren(e1), rename(env + (y -> yrenamed), e2))
-        case Function(p, paramse, retty, e1) =>
-          val (env1, prenamed) = p match {
-            case None => (env, None)
-            case Some(y) =>
-              val yrenamed = renameVar(y)
-              (env + (y -> yrenamed), Some(yrenamed))
-          }
-          val (env2, paramserenamed) = paramse match {
-            case Left(params) =>
-              val (envnew, revparamsrenamed) = params.foldLeft((env1, Nil: List[(String, Typ)])) {
-                case ((envacc, renamedacc), (y, t)) =>
-                  val yrenamed = renameVar(y)
-                  (envacc + (y -> yrenamed), (yrenamed, t) :: renamedacc)
-              }
-              (envnew, Left(revparamsrenamed.reverse))
-            case Right((mode,y,t)) =>
-              val yrenamed = renameVar(y)
-              (env1 + (y -> yrenamed), Right((mode,yrenamed, t)))
-          }
-          Function(prenamed, paramserenamed, retty, rename(env2, e1))
-        case Call(e1, args) => Call(ren(e1), args map ren)
-        case Obj(fields) => Obj(fields map { case (f,e) => (f, ren(e)) })
-        case GetField(e1, f) => GetField(ren(e1), f)
-        case Assign(e1, e2) => Assign(ren(e1), ren(e2))
-
-        /* Should not match: should have been removed. */
-        case InterfaceDecl(_, _, _) => throw new IllegalArgumentException("Gremlins: Encountered unexpected expression %s.".format(e))
-      }
-    }
-    rename(Map.empty, e)
-  }
-  */
-
 
   /*
    * Unbound Variable Error exception. Throw this exception to signal an unbound variable.
@@ -382,3 +336,5 @@ object ast {
     override def toString = Parser.formatErrorMessage(e.pos, "TerminationError", s"exceeded ${n} steps in evaluating ${e}")
   }
 }
+
+object ast extends ast

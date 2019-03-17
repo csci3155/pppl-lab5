@@ -36,9 +36,11 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
 
   /*** Exercise with DoWith ***/
 
+  /*** Rename bound variables in e ***/
+
   def rename[W](env: Map[String,String], e: Expr)(fresh: String => DoWith[W,String]): DoWith[W,Expr] = {
     def ren(env: Map[String,String], e: Expr): DoWith[W,Expr] = e match {
-      case N(_) | B(_) | Undefined | S(_) | Null | A(_) => doreturn(e)
+      case N(_) | B(_) | Undefined | S(_) => doreturn(e)
       case Print(e1) => ren(env,e1) map { e1p => Print(e1p) }
 
       case Unary(uop, e1) => ???
@@ -51,7 +53,7 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
         ???
       }
 
-      case Function(p, params, retty, e1) => {
+      case Function(p, params, tann, e1) => {
         val w: DoWith[W,(Option[String], Map[String,String])] = p match {
           case None => ???
           case Some(x) => ???
@@ -72,6 +74,7 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       case Obj(fields) => ???
       case GetField(e1, f) => ???
 
+      case Null | A(_) => ???
       case Assign(e1, e2) => ???
 
       /* Should not match: should have been removed */
@@ -143,16 +146,16 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
 
     e match {
       case Print(e1) => typeof(env, e1); TUndefined
-      case N(_) => TNumber
-      case B(_) => TBool
-      case Undefined => TUndefined
-      case S(_) => TString
+        /***** Cases directly from Lab 4. We will minimize the test of these cases in Lab 5. */
+      case N(_) => ???
+      case B(_) => ???
+      case Undefined => ???
+      case S(_) => ???
       case Var(x) => ???
       case Unary(Neg, e1) => typeof(env, e1) match {
         case TNumber => TNumber
         case tgot => err(tgot, e1)
       }
-        /***** Cases directly from Lab 4. We will minimize the test of these cases in Lab 5. */
       case Unary(Not, e1) =>
         ???
       case Binary(Plus, e1, e2) =>
@@ -170,35 +173,29 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       case If(e1, e2, e3) =>
         ???
 
-      case Obj(fields) =>
-        ???
-      case GetField(e1, f) =>
-        ???
+      case Obj(fields) => ???
+      case GetField(e1, f) => ???
 
         /***** Cases from Lab 4 that need a small amount of adapting. */
-      case Decl(m, x, e1, e2) =>
-        ???
+      case Decl(m, x, e1, e2) => ???
+
       case Function(p, params, tann, e1) => {
         // Bind to env1 an environment that extends env with an appropriate binding if
         // the function is potentially recursive.
         val env1 = (p, tann) match {
-          case (Some(f), Some(tret)) =>
-            val tprime = TFunction(params, tret)
-            ???
-          case (None, _) => env
+          /***** Add cases here *****/
           case _ => err(TUndefined, e1)
         }
         // Bind to env2 an environment that extends env1 with bindings for params.
         val env2 = ???
-        // Match on whether the return type is specified.
-        tann match {
-          case None => ???
-          case Some(tret) => ???
-        }
+        // Infer the type of the function body
+        val t1 = ???
+        // Check with the possibly annotated return type
+        ???
       }
       case Call(e1, args) => typeof(env, e1) match {
         case TFunction(params, tret) if (params.length == args.length) =>
-          (params, args).zipped.foreach {
+          (params zip args).foreach {
             ???
           }
           tret
@@ -241,30 +238,28 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
     require(isValue(v2), s"inequalityVal: v2 ${v2} is not a value")
     require(bop == Lt || bop == Le || bop == Gt || bop == Ge)
     (v1, v2) match {
-      case _ => ???
+      case _ => ??? // delete this line when done
     }
   }
 
   /* Capture-avoiding substitution in e replacing variables x with esub. */
   def substitute(e: Expr, esub: Expr, x: String): Expr = {
     def subst(e: Expr): Expr = e match {
-      case N(_) | B(_) | Undefined | S(_) | Null | A(_) => e
+      case N(_) | B(_) | Undefined | S(_) => e
       case Print(e1) => Print(subst(e1))
-        /***** Cases from Lab 3 */
+        /***** Cases from Lab 4 */
       case Unary(uop, e1) => ???
       case Binary(bop, e1, e2) => ???
       case If(e1, e2, e3) => ???
       case Var(y) => ???
-        /***** Cases need a small adaption from Lab 3 */
-      case Decl(mut, y, e1, e2) => Decl(mut, y, subst(e1), if (x == y) e2 else subst(e2))
-        /***** Cases needing adapting from Lab 4 */
-      case Function(p, paramse, retty, e1) =>
+      case Decl(mode, y, e1, e2) => ???
+      case Function(p, params, tann, e1) =>
         ???
-        /***** Cases directly from Lab 4 */
       case Call(e1, args) => ???
       case Obj(fields) => ???
       case GetField(e1, f) => ???
-        /***** New case for Lab 5 */
+        /***** New cases for Lab 5 */
+      case Null | A(_) => ???
       case Assign(e1, e2) => ???
 
       /* Should not match: should have been removed */
@@ -273,15 +268,16 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
 
     def myrename(e: Expr): Expr = {
       val fvs = freeVars(esub)
-      def fresh(x: String): String = if (fvs contains x) fresh(x + "$") else x
+      def fresh(x: String): String = if (???) fresh(x + "$") else x
       rename[Unit](e)(???){ x => ??? }
     }
 
-    subst(???)
+    subst(e) // change this line when you implement capture-avoidance
   }
 
-  /* Check whether or not an expression is reduced enough to be applied given a mode. */
-  def isRedex(mode: Mode, e: Expr): Boolean = ???
+  /* Check whether or not an expression is reducible given a mode. */
+  def isRedex(mode: Mode, e: Expr): Boolean =
+    ???
 
   def getBinding(mode: Mode, e: Expr): DoWith[Mem,Expr] = {
     require(!isRedex(mode,e), s"expression ${e} must not reducible under mode ${mode}")
@@ -342,10 +338,9 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       //case _ => throw NullDeferenceError(e)
 
       /* Inductive Cases: Search Rules */
-        /***** Cases needing adapting from Lab 3. Make sure to replace the case _ => ???. */
       case Print(e1) => step(e1) map { e1p => Print(e1p) }
-      case Unary(uop, e1) =>
-        ???
+        /***** Cases needing adapting from Lab 3. Make sure to replace the case _ => ???. */
+      case Unary(uop, e1) => ???
         /***** Cases needing adapting from Lab 4 */
       case GetField(e1, f) =>
         ???

@@ -137,10 +137,10 @@ trait Lab5Like { a: JsyApplication =>
 
     if (debug) {
       println("# ------------------------------------------------------------")
-      println("# Stepping ...".format(expr))
+      println("# Stepping %s ...".format(expr))
     }
 
-    handle() {
+    handle(()) {
       val v = iterateStep(expr)
       println(pretty(v))
     }
