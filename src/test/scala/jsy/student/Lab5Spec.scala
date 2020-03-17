@@ -57,12 +57,6 @@ class Lab5Spec(lab5: Lab5Like) extends FlatSpec {
 
   /* Tests based on rules */
 
-  "CastOkNull" should "perform CastOkNull" in {
-    assertResult(true) {
-      castOk(TNull, TObj(Map.empty))
-    }
-  }
-
   "DoNeg" should "return the negation of a number value" in {
     val e1 = N(5)
     val e2 = Unary(Neg, e1)

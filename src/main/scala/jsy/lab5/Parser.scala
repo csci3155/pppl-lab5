@@ -101,11 +101,8 @@ trait Parser { self: TokenParser =>
   def decl: Parser[Expr => Expr] =
     (mode ~ ident) ~ withpos("=" ~> expr) ^^ {
       case mode ~ x ~ ((pos,e1)) => ((e2: Expr) => Decl(mode, x, e1, e2) setPos pos)
-    } |
-    ("interface" ~> ident) ~ withpos(record(";", TObj, ty)) ^^ {
-      case tyvar ~ ((pos,ty)) => ((e: Expr) => InterfaceDecl(tyvar, ty, e) setPos pos) 
     }
-    
+
   def mode: Parser[Mode] =
     "const" ^^ { _ => MConst } |
     "name" ^^ { _ => MName } |
@@ -182,9 +179,8 @@ trait Parser { self: TokenParser =>
 
   def uop: Parser[Expr => Expr] =
     "-" ^^ (_ => (e: Expr) => Unary(Neg, e)) |
-    "!" ^^ (_ => (e: Expr) => Unary(Not, e)) |
-    "<" ~> ty <~ ">" ^^ (t => (e: Expr) => Unary(Cast(t), e))
-    
+    "!" ^^ (_ => (e: Expr) => Unary(Not, e))
+
   def call: Parser[Expr] =
     term ~ rep(callop | derefop) ^^ { case e0 ~ callderefs => (e0 /: callderefs){ case (acc, mk) => mk(acc) } }
   
@@ -202,7 +198,6 @@ trait Parser { self: TokenParser =>
       "true" ^^ (_ => B(true)) |
       "false" ^^ (_ => B(false)) |
       "undefined" ^^ (_ => Undefined) |
-      "null" ^^ (_ => Null) |
       ("console" ~ "." ~ "log") ~> "(" ~> expr <~ ")" ^^ (e => Print(e)) |
       function |
       record(",", Obj, noseq)
@@ -250,7 +245,6 @@ trait Parser { self: TokenParser =>
     "bool" ^^ (_ => TBool) |
     "string" ^^ (_ => TString) |
     "Undefined" ^^ (_ => TUndefined) |
-    "Null" ^^ (_ => TNull) |
     record(";", TObj, ty) |
     tyfunction |
     failure("type expected")

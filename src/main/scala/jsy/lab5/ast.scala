@@ -65,12 +65,8 @@ class ast {
   
   /* Addresses and Mutation */
   case class Assign(e1: Expr, e2: Expr) extends Expr
-  case object Null extends Expr
   case class A private[ast] (addr: Int) extends Expr
   case object Deref extends Uop /* *e1 */
-  
-  /* Casting */
-  case class Cast(t: Typ) extends Uop
   
   /* Types */
   abstract class Typ
@@ -78,7 +74,6 @@ class ast {
   case object TBool extends Typ
   case object TString extends Typ
   case object TUndefined extends Typ
-  case object TNull extends Typ
   case class TFunction(params: List[(String,MTyp)], tret: Typ) extends Typ {
     override def equals(other: Any) = other.isInstanceOf[TFunction] && {
       other match {
@@ -91,9 +86,6 @@ class ast {
   case class TObj(tfields: Map[String, Typ]) extends Typ
   case class TVar(tvar: String) extends Typ
   case class TInterface(tvar: String, t: Typ) extends Typ
-
-  /* Type Declarations */
-  case class InterfaceDecl(tvar: String, t: Typ, e: Expr) extends Expr
 
   /* Parameter Modes */
   sealed abstract class Mode
@@ -134,7 +126,7 @@ class ast {
 
   /* Define values. */
   def isValue(e: Expr): Boolean = e match {
-    case N(_) | B(_) | Undefined | S(_) | Function(_, _, _, _) | A(_) | Null => true
+    case N(_) | B(_) | Undefined | S(_) | Function(_, _, _, _) | A(_) => true
     case _ => false
   }
   
@@ -149,7 +141,7 @@ class ast {
   }
   
   def isBaseType(t: Typ): Boolean = t match {
-    case TNumber | TBool | TString | TUndefined | TNull => true
+    case TNumber | TBool | TString | TUndefined => true
     case _ => false
   }
 
@@ -175,7 +167,6 @@ class ast {
           (s, acc) => s + ",\n  " + acc
         }
       "{ %s }".format(pretty_fields.getOrElse(""))
-    case Null => "null"
     case A(i) => "0x%x".format(i)
   })
 
@@ -225,7 +216,6 @@ class ast {
           (s, acc) => s + "; " + acc
         }
       "{ %s }".format(pretty_fields.getOrElse(""))
-    case TNull => "Null"
     case TVar(tvar) => tvar
     case TInterface(tvar, t1) => "Interface %s %s".format(tvar, rec(t1))
   })
@@ -252,7 +242,7 @@ class ast {
       val boundvars = (params map { case (x, _) => Var(x) }) ++ (p map Var)
       fv(e1) -- boundvars
     }
-    case N(_) | B(_) | Undefined | S(_) | Null | A(_) => Set.empty
+    case N(_) | B(_) | Undefined | S(_) | A(_) => Set.empty
     case Unary(_, e1) => fv(e1)
     case Binary(_, e1, e2) => fv(e1) | fv(e2)
     case If(e1, e2, e3) => fv(e1) | fv(e2) | fv(e3)
@@ -263,7 +253,6 @@ class ast {
     case Obj(fields) => fields.foldLeft(Set.empty: Set[Var])({ case (acc, (_, ei)) => acc | fv(ei) })
     case GetField(e1, _) => fv(e1)
     case Assign(e1, e2) => fv(e1) | fv(e2)
-    case InterfaceDecl(_, _, e1) => fv(e1)
   })
 
   def freeVars(e: Expr): Set[String] = freeVarsVar(e) map { case Var(x) => x }
