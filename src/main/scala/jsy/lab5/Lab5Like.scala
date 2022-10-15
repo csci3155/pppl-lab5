@@ -24,6 +24,7 @@ trait Lab5Like { a: JsyApplication =>
   def mapFirstWith[W,A](l: List[A])(f: A => Option[DoWith[W,A]]): DoWith[W,List[A]]
 
   /* Type Inference */
+  def castOk(t1: Typ, t2: Typ): Boolean
   def isBindex(m: Mode, e: Expr): Boolean
   type TEnv = Map[String, MTyp]
   def typeof(env: TEnv, e: Expr): Typ
@@ -34,6 +35,9 @@ trait Lab5Like { a: JsyApplication =>
   def isRedex(mode: Mode, e: Expr): Boolean
   def getBinding(mode: Mode, e: Expr): DoWith[Mem,Expr]
   def step(e: Expr): DoWith[Mem,Expr]
+
+  /* Lower */
+  def lower(e: Expr): Expr
 
   /** Interface for rename with a given fresh op. */
   def rename[W](e: Expr)(z: W)(fresh: String => DoWith[W,String]): Expr = {
@@ -91,19 +95,31 @@ trait Lab5Like { a: JsyApplication =>
   }
 
   // Convenience to pass in a jsy expression as a string.
-  def iterateStep(s: String): Expr = iterateStep(parse(s))
+  def iterateStep(s: String): Expr = iterateStep(lower(parse(s)))
 
   // Interface for main
-  def processFile(file: java.io.File) {
+  def processFile(file: java.io.File): Unit = {
     if (debug) {
       println("# ============================================================")
       println("# File: " + file.getName)
       println("# Parsing ...")
     }
 
-    val expr =
+    val exprin =
       handle(None: Option[Expr]) {Some{
         jsy.lab5.Parser.parseFile(file)
+      }} getOrElse {
+        return
+      }
+
+    if (debug) {
+      println("# ------------------------------------------------------------")
+      println("# Lowering %s ...".format(exprin))
+    }
+
+    val expr =
+      handle(None: Option[Expr]) {Some{
+        lower(exprin)
       }} getOrElse {
         return
       }

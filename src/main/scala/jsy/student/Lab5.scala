@@ -74,7 +74,11 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       case Obj(fields) => ???
       case GetField(e1, f) => ???
 
+      case Null | A(_) => ???
       case Assign(e1, e2) => ???
+
+      /* Should not match: should have been removed */
+      case InterfaceDecl(_, _, _) => throw new IllegalArgumentException("Gremlins: Encountered unexpected expression %s.".format(e))
     }
     ren(env, e)
   }
@@ -111,6 +115,18 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
 
   // There are better ways to deal with the combination of data structures like List, Map, and
   // DoWith, but we won't tackle that in this assignment.
+
+  /*** Casting ***/
+
+  def castOk(t1: Typ, t2: Typ): Boolean = (t1, t2) match {
+      /***** Make sure to replace the case _ => ???. */
+    //case _ => ???
+      /***** Cases for the extra credit. Do not attempt until the rest of the assignment is complete. */
+    case (TInterface(tvar, t1p), _) => ???
+    case (_, TInterface(tvar, t2p)) => ???
+      /***** Otherwise, false. */
+    case _ => false
+  }
 
   /*** Type Inference ***/
 
@@ -193,8 +209,16 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
         ???
       case Assign(_, _) => err(TUndefined, e)
 
+      case Null =>
+        ???
+
+      case Unary(Cast(t), e1) => typeof(env, e1) match {
+        case tgot if ??? => ???
+        case tgot => err(tgot, e1)
+      }
+
       /* Should not match: non-source expressions or should have been removed */
-      case A(_) | Unary(Deref, _) => throw new IllegalArgumentException("Gremlins: Encountered unexpected expression %s.".format(e))
+      case A(_) | Unary(Deref, _) | InterfaceDecl(_, _, _) => throw new IllegalArgumentException("Gremlins: Encountered unexpected expression %s.".format(e))
     }
   }
 
@@ -221,7 +245,7 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
   /* Capture-avoiding substitution in e replacing variables x with esub. */
   def substitute(e: Expr, esub: Expr, x: String): Expr = {
     def subst(e: Expr): Expr = e match {
-      case N(_) | B(_) | Undefined | S(_) | A(_) => e
+      case N(_) | B(_) | Undefined | S(_) => e
       case Print(e1) => Print(subst(e1))
         /***** Cases from Lab 4 */
       case Unary(uop, e1) => ???
@@ -235,7 +259,11 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       case Obj(fields) => ???
       case GetField(e1, f) => ???
         /***** New cases for Lab 5 */
+      case Null | A(_) => ???
       case Assign(e1, e2) => ???
+
+      /* Should not match: should have been removed */
+      case InterfaceDecl(_, _, _) => throw new IllegalArgumentException("Gremlins: Encountered unexpected expression %s.".format(e))
     }
 
     def myrename(e: Expr): Expr = {
@@ -247,7 +275,7 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
     subst(e) // change this line when you implement capture-avoidance
   }
 
-  /* Check whether or not an expression is reducible given a mode. */
+  /* Check whether or not an expression is reduced enough to be applied given a mode. */
   def isRedex(mode: Mode, e: Expr): Boolean =
     ???
 
@@ -305,6 +333,10 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
         }
       }
 
+      /* Base Cases: Error Rules */
+        /***** Replace the following case with a case to throw NullDeferenceError.  */
+      //case _ => throw NullDeferenceError(e)
+
       /* Inductive Cases: Search Rules */
       case Print(e1) => step(e1) map { e1p => Print(e1p) }
         /***** Cases needing adapting from Lab 3. Make sure to replace the case _ => ???. */
@@ -336,6 +368,8 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
   def lower(e: Expr): Expr =
     /* Do nothing by default. Change to attempt extra credit. */
     e
+
+  /*** External Interfaces ***/
 
   //this.debug = true // comment this out or set to false if you don't want print debugging information
   this.maxSteps = Some(1000) // comment this out or set to None to not bound the number of steps.
