@@ -408,8 +408,8 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
       rename[Unit](e)(){ x => doreturn(fresh(x)) }
     }
 
-    // subst(myrename(e))
-    subst(e)
+    subst(myrename(e))
+    // subst(e)
   }
 
   /* Check whether or not an expression is reduced enough to be applied given a mode. */
