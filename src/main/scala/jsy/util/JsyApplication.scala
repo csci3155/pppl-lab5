@@ -7,7 +7,7 @@ trait JsyApplication {
   import jsy.util.options
   
   var debug = false /* set to false to disable debugging output */
-  var keepGoing = true /* set to true to keep going after exceptions */
+  var keepGoing = false /* set to true to keep going after exceptions */
   var maxSteps: Option[Int] = None /* set to a number to bound the number of execution steps */
   
   var anonOption = ("input",
@@ -34,16 +34,16 @@ trait JsyApplication {
     
   def processFile(file: File): Unit
 
-  def testJsy(file: File)(k: (File, File, => (Boolean, String)) => Unit) {
+  def testJsy(file: File)(k: (File, File, Unit => (Boolean, String)) => Unit): Unit = {
     val jsyext = """[.]jsy$""".r
     val ans: File = new File(jsyext.replaceAllIn(file.getPath, ".ans"))
-    k(file, ans, {
+    k(file, ans, { case () =>
       if (!ans.exists()) {
         (false, s"Expected output file ${ans} does not exist.")
       }
       else {
         val outstream = new ByteArrayOutputStream()
-        Console.withOut(outstream)(handle(()){ processFile(file)})
+        Console.withOut(outstream)(processFile(file))
 
         val encoding = java.nio.charset.StandardCharsets.UTF_8
         val ansstring = new String(Files.readAllBytes(ans.toPath), encoding)
@@ -65,8 +65,8 @@ trait JsyApplication {
     }
   }
 
-  def doFile(doit: File => Unit, file: File) = {
-    def loop(file: File) {
+  def doFile(doit: File => Unit, file: File): Unit = {
+    def loop(file: File): Unit = {
       if (file.isFile) {
         doit(file)
       }
@@ -80,11 +80,11 @@ trait JsyApplication {
     loop(file)
   }
 
-  def test(fileordir: File)(k: (File, File, => (Boolean, String)) => Unit) {
+  def test(fileordir: File)(k: (File, File, Unit => (Boolean, String)) => Unit): Unit = {
     doFile({ f => testJsy(f)(k) }, fileordir)
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val opts = new options.Options("jsy", flagOptions, anonOption)
     val file: File = opts.process(args)
     doFile(processFile, file)

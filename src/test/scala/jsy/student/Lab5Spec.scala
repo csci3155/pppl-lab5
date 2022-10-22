@@ -7,8 +7,9 @@ import jsy.tester.JavascriptyTester
 import jsy.util.DoWith
 import jsy.util.DoWith._
 import org.scalatest._
+import flatspec._
 
-class Lab5Spec(lab5: Lab5Like) extends FlatSpec {
+class Lab5Spec(lab5: Lab5Like) extends AnyFlatSpec {
   import lab5._
 
   "mapFirstDoWith" should "map the first element where f returns Some" in {
@@ -57,6 +58,12 @@ class Lab5Spec(lab5: Lab5Like) extends FlatSpec {
 
   /* Tests based on rules */
 
+  "CastOkNull" should "perform CastOkNull" in {
+    assertResult(true) {
+      castOk(TNull, TObj(Map.empty))
+    }
+  }
+
   "DoNeg" should "return the negation of a number value" in {
     val e1 = N(5)
     val e2 = Unary(Neg, e1)
@@ -77,7 +84,3 @@ class Lab5SpecRunner extends Lab5Spec(jsy.student.Lab5)
 // The test expects a corresponding .ans file with the expected result.
 class Lab5JsyTests extends JavascriptyTester(None, "lab5", jsy.student.Lab5)
 
-class Lab5Suite extends Suites(
-  new Lab5SpecRunner,
-  new Lab5JsyTests
-)
