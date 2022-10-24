@@ -37,11 +37,17 @@ jobs:
           repository: csci3155/pppl-labdev
           path: master_code
 
+      - name: Create Grader Resources directory
+        run: mkdir -p student_code/src/test/resources
+
       - name: Copy Additional Tests
-        run: cp -r master_code/grader/src/test/resources/lab5xc student_code/grader/src/test/resources/lab5xc
+        run: cp -r master_code/grader/src/test/resources/lab5xc src/test/resources/lab5xc
+
+      - name: Create Grader Scala directory
+        run: mkdir -p student_code/src/test/scala/jsy/grader/
 
       - name: Copy Additional JSYTester
-        run: cp master_code/grader/src/test/scala/jsy/grader/Lab5ExtraCredit.scala student_code/test/scala/jsy/grader/Lab5ExtraCredit.scala
+        run: cp master_code/grader/src/test/scala/jsy/grader/Lab5ExtraCredit.scala student_code/src/test/scala/jsy/grader/Lab5ExtraCredit.scala
 
       - name: Run Additional Test
         timeout-minutes: 2
