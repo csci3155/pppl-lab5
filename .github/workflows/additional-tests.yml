@@ -38,10 +38,10 @@ jobs:
           path: master_code
 
       - name: Create Grader Resources directory
-        run: mkdir -p student_code/src/test/resources
+        run: mkdir -p student_code/grader/src/test/resources
 
       - name: Copy Additional Tests
-        run: cp -r master_code/grader/src/test/resources/lab5xc student_code/src/test/resources/lab5xc
+        run: cp -r master_code/grader/src/test/resources/lab5xc student_code/grader/src/test/resources/lab5xc
 
       - name: Create Grader Scala directory
         run: mkdir -p student_code/src/test/scala/jsy/grader/
