@@ -38,7 +38,7 @@ jobs:
           path: master_code
 
       - name: Copy Additional Tests
-        run: cp master_code/grader/src/test/resources/lab5xc student_code/grader/src/test/resources/lab5xc
+        run: cp -r master_code/grader/src/test/resources/lab5xc student_code/grader/src/test/resources/lab5xc
 
       - name: Copy Additional JSYTester
         run: cp master_code/grader/src/test/scala/jsy/grader/Lab5ExtraCredit.scala student_code/test/scala/jsy/grader/Lab5ExtraCredit.scala
