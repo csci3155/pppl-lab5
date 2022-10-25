@@ -1,5 +1,6 @@
 package jsy.student
 
+import scala.collection.immutable.SortedMap
 import jsy.lab5.Lab5Like
 import jsy.lab5.ast._
 import jsy.lab5.Parser.parse
@@ -60,7 +61,7 @@ class Lab5Spec(lab5: Lab5Like) extends AnyFlatSpec {
 
   "CastOkNull" should "perform CastOkNull" in {
     assertResult(true) {
-      castOk(TNull, TObj(Map.empty))
+      castOk(TNull, TObj(SortedMap.empty))
     }
   }
 
