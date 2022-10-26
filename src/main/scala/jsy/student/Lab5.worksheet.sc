@@ -6,7 +6,7 @@
  */
 
 // Imports the parse function from jsy.lab1.Parser
-import jsy.lab5.Parser.parse
+import jsy.lab5.Parser.{parse,parseFile}
 
 // Imports the ast nodes
 import jsy.lab5.ast._
@@ -37,3 +37,10 @@ val aliasingex = parse("""
   console.log(y.f)
 """)
 //iterateStep(aliasingex) // uncomment when you are ready to test your step function.
+
+// Parse the JavaScripty expression in your worksheet
+val worksheetJsy = parseFile("src/main/scala/jsy/student/Lab5.worksheet.ts")
+
+// Interpret the JavaScripty expression in your worksheet
+//inferType(worksheetJsy)
+//iterateStep(worksheetJsy)
