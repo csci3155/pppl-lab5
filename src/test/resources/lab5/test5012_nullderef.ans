@@ -1,19 +1,19 @@
-## type Decl(MVar,b,Unary(Cast(TObj(Map(n -> TNumber))),Null),Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b))))) : number
+## type Decl(MVar,b,Unary(Cast(TObj(TreeMap(n -> TNumber))),Null),Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b))))) : number
 ## step    0:
 ##  Map()
-##  Decl(MVar,b,Unary(Cast(TObj(Map(n -> TNumber))),Null),Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b)))))
+##  Decl(MVar,b,Unary(Cast(TObj(TreeMap(n -> TNumber))),Null),Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b)))))
 ## step    1:
 ##  Map()
-##  Decl(MVar,b,Null,Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b)))))
+##  Decl(MVar,b,Null,Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Var(b)))))
 ## step    2:
 ##  Map(A(1) -> Null)
-##  Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Unary(Deref,A(1)))))
+##  Decl(MConst,f,Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),Call(Var(f),List(Unary(Deref,A(1)))))
 ## step    3:
 ##  Map(A(1) -> Null)
-##  Call(Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),List(Unary(Deref,A(1))))
+##  Call(Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),List(Unary(Deref,A(1))))
 ## step    4:
 ##  Map(A(1) -> Null)
-##  Call(Function(None,List((x,MTyp(MConst,TObj(Map(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),List(Null))
+##  Call(Function(None,List((x,MTyp(MConst,TObj(TreeMap(n -> TNumber))))),Some(TNumber),Binary(Plus,GetField(Var(x),n),N(1.0))),List(Null))
 ## step    5:
 ##  Map(A(1) -> Null)
 ##  Binary(Plus,GetField(Null,n),N(1.0))

@@ -1,5 +1,6 @@
 package jsy.student
 
+import scala.collection.immutable.SortedMap
 import jsy.lab5.Lab5Like
 
 object Lab5 extends jsy.util.JsyApplication with Lab5Like {
@@ -101,8 +102,8 @@ object Lab5 extends jsy.util.JsyApplication with Lab5Like {
   }
 
   // Map map with an operator returning a DoWith
-  def mapWith[W,A,B,C,D](m: Map[A,B])(f: ((A,B)) => DoWith[W,(C,D)]): DoWith[W,Map[C,D]] = {
-    m.foldRight[DoWith[W,Map[C,D]]]( ??? ) {
+  def mapWith[W,A:Ordering,B,C:Ordering,D](m: SortedMap[A,B])(f: ((A,B)) => DoWith[W,(C,D)]): DoWith[W,SortedMap[C,D]] = {
+    m.foldRight[DoWith[W,SortedMap[C,D]]]( ??? ) {
       ???
     }
   }
