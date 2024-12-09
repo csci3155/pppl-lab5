@@ -1,7 +1,5 @@
 package jsy.tester
-
 import java.io.File
-
 import jsy.util.JsyApplication
 import org.scalatest._
 import flatspec._
@@ -10,7 +8,6 @@ import flatspec._
  * A ScalaTest interface for running system tests.
  */
 class JavascriptyTester(rootPrefix: Option[String], testDirectory: String, jsy: JsyApplication) extends AnyFlatSpec {
-
   val testResources = s"src${File.separator}test${File.separator}resources"
   val testPrefix = rootPrefix match {
     case None => testResources
@@ -19,9 +16,8 @@ class JavascriptyTester(rootPrefix: Option[String], testDirectory: String, jsy: 
   val testPath = s"${testPrefix}${File.separator}${testDirectory}"
   jsy.test(new File(testPath)) { case (in,ans,assertion) =>
     s"eval on ${in}" should s"match ${ans}" in {
-      val (b: Boolean, msg: String) = assertion(())
+      val (b: Boolean, msg: String) = assertion
       assert(b, msg)
     }
   }
-
 }

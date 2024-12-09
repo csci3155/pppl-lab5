@@ -1,0 +1,2 @@
+StaticTypeError
+<source>:2:1: invalid type Undefined for sub-expression Var(x) in Assign(Var(x),Binary(Plus,Var(x),N(23.0)))
