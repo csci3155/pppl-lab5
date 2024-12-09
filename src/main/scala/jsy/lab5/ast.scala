@@ -54,7 +54,7 @@ class ast {
   case class If(e1: Expr, e2: Expr, e3: Expr) extends Expr
   
   /* Functions */
-  case class Function(p: Option[String], params: List[(String,MTyp)], tann: Option[Typ], e1: Expr) extends Expr
+  case class Fun(p: Option[String], params: List[(String,MTyp)], tann: Option[Typ], e1: Expr) extends Expr
   case class Call(e1: Expr, args: List[Expr]) extends Expr
   
   /* I/O */
@@ -66,12 +66,8 @@ class ast {
   
   /* Addresses and Mutation */
   case class Assign(e1: Expr, e2: Expr) extends Expr
-  case object Null extends Expr
   case class A private[ast] (addr: Int) extends Expr
   case object Deref extends Uop /* *e1 */
-  
-  /* Casting */
-  case class Cast(t: Typ) extends Uop
   
   /* Types */
   abstract class Typ
@@ -79,11 +75,10 @@ class ast {
   case object TBool extends Typ
   case object TString extends Typ
   case object TUndefined extends Typ
-  case object TNull extends Typ
-  case class TFunction(params: List[(String,MTyp)], tret: Typ) extends Typ {
-    override def equals(other: Any) = other.isInstanceOf[TFunction] && {
+  case class TFun(params: List[(String,MTyp)], tret: Typ) extends Typ {
+    override def equals(other: Any) = other.isInstanceOf[TFun] && {
       other match {
-        case TFunction(oparams, otret) if otret == tret && oparams.length == params.length =>
+        case TFun(oparams, otret) if otret == tret && oparams.length == params.length =>
           (oparams zip params).forall { case ((_, omt), (_, mt)) => omt == mt }
         case _ => false
       }
@@ -91,20 +86,27 @@ class ast {
   }
   case class TObj(tfields: SortedMap[String, Typ]) extends Typ
   case class TVar(tvar: String) extends Typ
-  case class TInterface(tvar: String, t: Typ) extends Typ
-
-  /* Type Declarations */
-  case class InterfaceDecl(tvar: String, t: Typ, e: Expr) extends Expr
 
   /* Parameter Modes */
   sealed abstract class Mode
   case object MConst extends Mode
-  case object MName extends Mode
   case object MVar extends Mode
   case object MRef extends Mode
 
   /* Parameter Types */
   case class MTyp(m: Mode, t: Typ)
+
+  /* Extension: Call-By-Name */
+  //case object MName extends Mode
+
+  /* Extension: Casting and Null */
+  //case class Cast(t: Typ) extends Uop
+  //case object Null extends Expr
+  //case object TNull extends Typ
+  
+  /* Extension: Interfaces and Recursive Types */
+  //case class InterfaceDecl(tvar: String, t: Typ, e: Expr) extends Expr
+  //case class TInterface(tvar: String, t: Typ) extends Typ
 
   /*
    * Memory
@@ -135,12 +137,7 @@ class ast {
 
   /* Define values. */
   def isValue(e: Expr): Boolean = e match {
-    case N(_) | B(_) | Undefined | S(_) | Function(_, _, _, _) | A(_) | Null => true
-    case _ => false
-  }
-  
-  def isLExpr(e: Expr): Boolean = e match {
-    case Var(_) | GetField(_, _) => true
+    case N(_) | B(_) | Undefined | S(_) | Fun(_, _, _, _) | A(_) /*| Null*/ => true
     case _ => false
   }
   
@@ -149,11 +146,6 @@ class ast {
     case _ => false
   }
   
-  def isBaseType(t: Typ): Boolean = t match {
-    case TNumber | TBool | TString | TUndefined | TNull => true
-    case _ => false
-  }
-
   /*
    * Pretty-print values.
    * 
@@ -165,8 +157,8 @@ class ast {
     case B(b) => b.toString
     case Undefined => "undefined"
     case S(s) => s
-    case Function(p, _, _, _) =>
-      "[Function%s]".format(p match { case None => "" case Some(s) => ": " + s })
+    case Fun(xopt, _, _, _) =>
+      "[Function%s]".format(xopt match { case None => " (anonymous)" case Some(s) => ": " + s })
     case Obj(fields) =>
       val pretty_fields =
         fields map {
@@ -176,7 +168,7 @@ class ast {
           (s, acc) => s + ",\n  " + acc
         }
       "{ %s }".format(pretty_fields.getOrElse(""))
-    case Null => "null"
+    //case Null => "null"
     case A(i) => "0x%x".format(i)
   })
 
@@ -213,7 +205,7 @@ class ast {
     case TBool => "bool"
     case TString => "string"
     case TUndefined => "Undefined"
-    case TFunction(params, tret) => {
+    case TFun(params, tret) => {
       val pretty_params =
         params map { case (x,mt) => "%s: %s".format(x, pretty(mt)) } reduceRightOption {
           (s, acc) => s + ", " + acc
@@ -226,12 +218,13 @@ class ast {
           (s, acc) => s + "; " + acc
         }
       "{ %s }".format(pretty_fields.getOrElse(""))
-    case TNull => "Null"
+    //case TNull => "Null"
     case TVar(tvar) => tvar
-    case TInterface(tvar, t1) => "Interface %s %s".format(tvar, rec(t1))
+    //case TInterface(tvar, t1) => "Interface %s %s".format(tvar, rec(t1))
   })
 
   def pretty(t: Typ): String = prettyTyp(t)
+
 
   def pretty(mty: MTyp): String = mty match {
     case MTyp(MConst, ty) => s"${pretty(ty)}"
@@ -240,7 +233,7 @@ class ast {
 
   def pretty(mode: Mode): String = mode match {
     case MConst => "const"
-    case MName => "name"
+    //case MName => "name"
     case MVar => "var"
     case MRef => "ref"
   }
@@ -249,11 +242,11 @@ class ast {
   protected def freeVarsVar: Visitor[Expr,Set[Var]] = Visitor(fv => {
     case vr@Var(x) => Set(vr)
     case Decl(_, x, e1, e2) => fv(e1) | (fv(e2) - Var(x))
-    case Function(p, params, _, e1) => {
+    case Fun(p, params, _, e1) => {
       val boundvars = (params map { case (x, _) => Var(x) }) ++ (p map Var)
       fv(e1) -- boundvars
     }
-    case N(_) | B(_) | Undefined | S(_) | Null | A(_) => Set.empty
+    case N(_) | B(_) | Undefined | S(_) /*| Null*/ | A(_) => Set.empty
     case Unary(_, e1) => fv(e1)
     case Binary(_, e1, e2) => fv(e1) | fv(e2)
     case If(e1, e2, e3) => fv(e1) | fv(e2) | fv(e3)
@@ -264,7 +257,7 @@ class ast {
     case Obj(fields) => fields.foldLeft(Set.empty: Set[Var])({ case (acc, (_, ei)) => acc | fv(ei) })
     case GetField(e1, _) => fv(e1)
     case Assign(e1, e2) => fv(e1) | fv(e2)
-    case InterfaceDecl(_, _, e1) => fv(e1)
+    //case InterfaceDecl(_, _, e1) => fv(e1)
   })
 
   def freeVars(e: Expr): Set[String] = freeVarsVar(e) map { case Var(x) => x }
@@ -275,7 +268,16 @@ class ast {
   def checkClosed(e: Expr): Unit = {
     freeVarsVar(e).headOption.foreach { x => throw new UnboundVariableError(x) }
   }
-
+  /* Dynamic Type Error.  Extends Expr for simplicity. */
+  case class DynamicTypeError(e: Expr) extends Expr {
+    override def toString = Parser.formatErrorMessage(e.pos, "DynamicTypeError", "in evaluating " + e)
+  }
+  
+  /* Null Dereference Error exception. Extends Expr for simplicity. */
+  case class NullDereferenceError(e: Expr) extends Expr {
+    override def toString = Parser.formatErrorMessage(e.pos, "NullDereferenceError", "in evaluating " + e)
+  }
+ 
   /*
    * Unbound Variable Error exception. Throw this exception to signal an unbound variable.
    */
@@ -283,29 +285,7 @@ class ast {
     override def toString =
       Parser.formatErrorMessage(x.pos, "UnboundVariableError", "unbound variable %s".format(x.x))
   }
-  
-  /*
-   * Dynamic Type Error exception.  Throw this exception to signal a dynamic
-   * type error.
-   * 
-   *   throw DynamicTypeError(e)
-   * 
-   */
-  case class DynamicTypeError(e: Expr) extends Exception {
-    override def toString = Parser.formatErrorMessage(e.pos, "DynamicTypeError", "in evaluating " + e)
-  }
-  
-  /*
-   * Null Dereference Error exception.  Throw this exception to signal a null
-   * pointer dereference error.
-   * 
-   *   throw NullDereferenceError(e)
-   * 
-   */
-  case class NullDereferenceError(e: Expr) extends Exception {
-    override def toString = Parser.formatErrorMessage(e.pos, "NullDereferenceError", "in evaluating " + e)
-  }
-  
+ 
   /*
    * Static Type Error exception.  Throw this exception to signal a static
    * type error.

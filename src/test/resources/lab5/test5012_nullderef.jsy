@@ -1,3 +1,0 @@
-var b = <{n: number}> null
-const f = function(x: {n: number}): number { return x.n + 1 }
-f(b)

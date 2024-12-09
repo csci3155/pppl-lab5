@@ -1,2 +1,0 @@
-StaticTypeError
-test5013_badcast.jsy:2:24: invalid type { f: {  }; g: number } for sub-expression Var(x) in Unary(Cast(TObj(TreeMap(f -> TObj(TreeMap(h -> TNumber))))),Var(x))

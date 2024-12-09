@@ -1,0 +1,5 @@
+var y = 0
+ref x = y
+x = x + 23
+console.log(x + 45)
+console.log(y + 67)
