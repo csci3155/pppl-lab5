@@ -1,8 +1,8 @@
 package jsy.tester
 import java.io.File
 import jsy.util.JsyApplication
-import org.scalatest._
-import flatspec._
+import org.scalatest.*
+import flatspec.*
 
 /*
  * A ScalaTest interface for running system tests.
@@ -15,9 +15,10 @@ class JavascriptyTester(rootPrefix: Option[String], testDirectory: String, jsy: 
   }
   val testPath = s"${testPrefix}${File.separator}${testDirectory}"
   jsy.test(new File(testPath)) { case (in,ans,assertion) =>
-    s"eval on ${in}" should s"match ${ans}" in {
+    val testLabel = in.getName.stripSuffix(".jsy")
+    registerTest(s"eval ${testLabel}") {
       val (b: Boolean, msg: String) = assertion
-      assert(b, msg)
+      if (!b) fail(msg)
     }
   }
 }

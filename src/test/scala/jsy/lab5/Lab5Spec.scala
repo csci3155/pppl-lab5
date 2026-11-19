@@ -1,15 +1,15 @@
 package jsy.lab5
 
 import scala.collection.immutable.SortedMap
-import jsy.lab5.ast._
+import jsy.lab5.ast.*
 import jsy.lab5.Parser.parse
 import jsy.tester.JavascriptyTester
 import jsy.util.DoWith
-import jsy.util.DoWith._
-import org.scalatest._
-import flatspec._
-import Lab5._
-import java.{util => ju}
+import jsy.util.DoWith.*
+import org.scalatest.*
+import flatspec.*
+import Lab5.*
+import java.util as ju
 
 class Lab5StudentSpec extends AnyFlatSpec {
 }
@@ -47,9 +47,12 @@ class Lab5Spec extends AnyFlatSpec {
   }
 
   "DoDeref" should "Deref a Reference" in {
-    val e = Unary(Deref, A(1))
+    /* Addresses can only be created through memalloc, so allocate N(1) to get
+     * both an address bound to it and the memory holding that binding. */
+    val (m, a) = memalloc(N(1))(memempty)
+    val e = Unary(Deref, a)
     assertResult(N(1)) {
-      val (_, r) = step(e)(memempty + (A(1) -> N(1)))
+      val (_, r) = step(e)(m)
       r
     }
   }
