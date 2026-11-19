@@ -4,9 +4,9 @@ import scala.collection.immutable.SortedMap
 import jsy.lab5.Parser.parse
 
 object Lab5 extends jsy.util.JsyApplication {
-  import jsy.lab5.ast._
+  import jsy.lab5.ast.*
   import jsy.util.DoWith
-  import jsy.util.DoWith._
+  import jsy.util.DoWith.*
 
   /*
    * CSCI 3155: Lab 5

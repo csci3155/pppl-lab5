@@ -45,13 +45,14 @@ trait JsyApplication {
         Console.withOut(outstream)(handle(()){ processFile(file)})
 
         val encoding = java.nio.charset.StandardCharsets.UTF_8
+        val program = new String(Files.readAllBytes(file.toPath), encoding)
         val ansstring = new String(Files.readAllBytes(ans.toPath), encoding)
 
         outstream.flush()
         val outstring = new String(outstream.toString(encoding.toString))
         outstream.close()
 
-        (ansstring == outstring, s"Computed output does not match expected output.\nComputed:\n${outstring}\nExpected:\n${ansstring}")
+        (ansstring == outstring, s"Program:\n${program}\nExpected:\n${ansstring}\nActual:\n${outstring}")
       }
     })
   }
@@ -156,7 +157,7 @@ object options {
 Usage: %s [options] %s
         
 """.format(program, anonName) +
-optline(anonName, anonDesc) + """
+      optline(anonName, anonDesc) + """
 Options:
 """
 

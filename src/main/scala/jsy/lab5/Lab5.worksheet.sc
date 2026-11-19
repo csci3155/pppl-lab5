@@ -4,16 +4,16 @@
  * This worksheet demonstrates how you could experiment
  * interactively with your implementations in Lab5.scala.
  */
-import jsy.lab5._
+import jsy.lab5.*
 
 // Imports the parse function from Parser
-import Parser.{parse,parseFile}
+import Parser.{parse, parseFile}
 
 // Imports the ast nodes
-import ast._
+import ast.*
 
 // Imports all of the functions from Lab5 (your implementations in Lab5.scala)
-import Lab5._
+import Lab5.*
 
 // Parse code with assignments
 parse("var x = 1; x = 2; console.log(x)")
